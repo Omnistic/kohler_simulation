@@ -1,6 +1,7 @@
 # Kohler Simulation
 OpticStudio archive (ZAR) and macro (ZPL) for BMP generation for [Kohler interactive simulation](https://kohler-simulation.microscopybench.com/).
 The 8,000 BMP files are converted to AVIF files that are displayed in the JavaScript, HTML app.
+The files were generated using OpticStudio 2026 R1 (Synopsys).
 ## Archive (ZAR) Usage
 The macro will automatically generate images for 20 steps for the field stop (field diaphragm), aperture stop (condenser diaphragm), and condenser (lens + diaphragm) axial position (total = 20 * 20 * 20 = 8,000 images).
 It is possible to use the archive manually:
