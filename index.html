@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Köhler Illumination</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e8;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .widget {
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .widget.is-fullscreen {
+    max-width: 100%;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .header { margin-bottom: 1.2rem; }
+  .widget.is-fullscreen .header { display: none; }
+
+  .header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7eb8d4;
+    margin-bottom: 0.3rem;
+  }
+  .header p { font-size: 0.82rem; color: #6a6a7a; font-weight: 300; }
+
+  .image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1516 / 782;
+    background: #050508;
+    border: 1px solid #1e1e2e;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .widget.is-fullscreen .image-container {
+    border: none; border-radius: 0;
+    aspect-ratio: unset;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .image-container img {
+    position: absolute;
+    inset: 0; width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .image-container img.hidden  { opacity: 0; }
+  .image-container img.visible { opacity: 1; }
+
+  .loading-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: #7eb8d4;
+    width: 0%;
+    transition: width 0.3s ease, opacity 0.5s ease;
+    z-index: 5;
+  }
+
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: rgba(5,5,8,0.75);
+    z-index: 15;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+  }
+  .loading-overlay.hidden { opacity: 0; }
+  .loading-overlay-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #7eb8d4;
+  }
+  .loading-overlay-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: #5a5a6a;
+  }
+
+  .overlay-label {
+    position: absolute;
+    /* position and font-size set by positionOverlays() in JS */
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #7eb8d4;
+    background: transparent;
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+.fullscreen-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: rgba(10,10,15,0.75);
+    border: 1px solid #2a2a3a;
+    color: #7eb8d4;
+    width: 28px; height: 28px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 20;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+  .fullscreen-btn:hover { opacity: 1; }
+  .fullscreen-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+  .controls {
+    margin-top: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .widget.is-fullscreen .controls {
+    margin: 0;
+    padding: 1rem 3rem 1.2rem;
+    background: #111;
+    width: 100%;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .slider-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9a9aaa;
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .slider-label span { color: #7eb8d4; float: right; font-weight: 700; }
+
+  .widget.is-fullscreen .slider-label {
+    font-size: 1rem;
+    color: #d0d0e0;
+    width: 300px;
+    white-space: nowrap;
+  }
+
+  .widget.is-fullscreen input[type=range] {
+    max-width: 680px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 2px;
+    background: #2a2a3a;
+    border-radius: 2px;
+    outline: none; cursor: pointer;
+    transition: opacity 0.3s ease;
+  }
+  input[type=range]:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #7eb8d4;
+    border: 2px solid #0a0a0f;
+    box-shadow: 0 0 6px rgba(126,184,212,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  input[type=range]:not(:disabled)::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+    box-shadow: 0 0 10px rgba(126,184,212,0.7);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #7eb8d4;
+    border: 2px solid #0a0a0f;
+    cursor: pointer;
+  }
+
+  .status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: #7a7a8a;
+    letter-spacing: 0.04em;
+  }
+  .widget.is-fullscreen .status { color: #9a9aaa; }
+  .status .loaded   { color: #4a7a5a; }
+  .status .frame-id { color: #7eb8d4; }
+
+  .legend {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: #6a6a7a;
+    letter-spacing: 0.04em;
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+  }
+  .legend span { color: #7eb8d4; }
+  .widget.is-fullscreen .legend {
+    padding: 0 3rem 0.8rem;
+    margin-top: 0;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="widget" id="widget">
+
+  <div class="header">
+    <h1>Köhler Illumination</h1>
+    <!-- <p>2-parameter simulation · 20 × 20 = 400 frames</p> -->
+  </div>
+
+  <div class="image-container" id="imageContainer">
+    <div class="loading-bar" id="loadingBar"></div>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-overlay-title">Loading frames…</div>
+      <div class="loading-overlay-sub" id="loadingOverlaySub">0 / 8000</div>
+    </div>
+    <div class="overlay-label" id="labelFS">FS</div>
+    <div class="overlay-label" id="labelFL">FL</div>
+    <div class="overlay-label" id="labelLamp">LAMP</div>
+    <div class="overlay-label" id="labelFS2">FS</div>
+    <div class="overlay-label" id="labelFL2">FL</div>
+    <div class="overlay-label" id="labelLamp2">LAMP</div>
+    <div class="overlay-label" id="labelAS">AS</div>
+    <div class="overlay-label" id="labelCL">CL</div>
+    <div class="overlay-label" id="labelSample">SAMPLE</div>
+    <div class="overlay-label" id="labelAS2">AS</div>
+    <div class="overlay-label" id="labelCL2">CL</div>
+    <div class="overlay-label" id="labelSample2">SAMPLE</div>
+    <button class="fullscreen-btn" id="fsBtn" title="Fullscreen">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path id="fsIcon" d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="controls">
+    <div class="slider-row">
+      <div class="slider-label">Field Diaphragm Opening</div>
+      <input type="range" id="slider2" min="0" max="19" step="1" value="0" disabled>
+    </div>
+    <div class="slider-row">
+      <div class="slider-label">Condenser Axial Position</div>
+      <input type="range" id="slider1" min="0" max="19" step="1" value="0" disabled>
+    </div>
+    <div class="slider-row">
+      <div class="slider-label">Condenser Diaphragm Opening</div>
+      <input type="range" id="slider0" min="0" max="19" step="1" value="0" disabled>
+    </div>
+    <div class="status" id="status" style="display:none">Loading frames…</div>
+    <!-- <div style="font-family:monospace;font-size:0.7rem;color:#ff0;margin-top:4px">BUILD: 57902</div> -->
+  </div>
+
+  <div class="legend">
+    <div><span>FL</span> Field Lens</div>
+    <div><span>FS</span> Field Stop</div>
+    <div><span>AS</span> Aperture Stop</div>
+    <div><span>CL</span> Condenser Lens</div>
+  </div>
+
+  <div style="margin-top:0.5rem;font-family:'Space Mono',monospace;font-size:0.62rem;color:#6a6a7a;letter-spacing:0.04em;">
+    © <a href="https://github.com/Omnistic" target="_blank" rel="noopener" style="color:#7eb8d4;text-decoration:none;">Omnistic</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color:#7eb8d4;text-decoration:none;">CC BY 4.0</a>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const BASE_URL  = '';
+const STEPS     = 20;   // steps per parameter
+const FILENAME  = (i, j, k) => `frame_${String(i).padStart(2,'0')}_${String(j).padStart(2,'0')}_${String(k).padStart(2,'0')}.avif`;
+const RADIUS    = 2;    // preload ±2 neighbours in each dimension
+// ─────────────────────────────────────────────────────────────────────────────
+
+const widget     = document.getElementById('widget');
+const container  = document.getElementById('imageContainer');
+const loadingBar     = document.getElementById('loadingBar');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingOverlaySub = document.getElementById('loadingOverlaySub');
+const statusEl   = document.getElementById('status');
+const fsBtn      = document.getElementById('fsBtn');
+const fsIcon     = document.getElementById('fsIcon');
+const slider0    = document.getElementById('slider0');
+const slider1    = document.getElementById('slider1');
+const slider2    = document.getElementById('slider2');
+
+const ICON_EXPAND   = 'M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z';
+const ICON_COLLAPSE = 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z';
+
+const TOTAL = STEPS * STEPS * STEPS;
+
+// Single display image — avoids stacking elements in the GPU compositor
+const displayImg = document.createElement('img');
+displayImg.className = 'visible';
+container.insertBefore(displayImg, loadingBar);
+
+// Off-screen cache: Image() objects, never added to the DOM
+const cache  = Array.from({length: STEPS}, () => Array.from({length: STEPS}, () => new Array(STEPS).fill(null)));
+const loaded = Array.from({length: STEPS}, () => Array.from({length: STEPS}, () => new Array(STEPS).fill(false)));
+let loadedCount = 0;
+let ci = 0, cj = 0, ck = 0;  // current indices
+
+function updateLoadingBar() {
+  loadingBar.style.width = (loadedCount / TOTAL * 100) + '%';
+  loadingOverlaySub.textContent = `${loadedCount} / ${TOTAL}`;
+  if (loadedCount === TOTAL) {
+    setTimeout(() => { loadingBar.style.opacity = '0'; }, 600);
+    loadingOverlay.classList.add('hidden');
+    document.querySelectorAll('.overlay-label').forEach(el => el.style.opacity = '1');
+    slider0.disabled = false;
+    slider1.disabled = false;
+    slider2.disabled = false;
+  }
+}
+
+function loadFrame(i, j, k) {
+  if (cache[i][j][k]) return;
+  const img = new Image();
+  cache[i][j][k] = img;
+  img.onload = () => {
+    loaded[i][j][k] = true;
+    loadedCount++;
+    updateLoadingBar();
+    updateStatus();
+    if (i === ci && j === cj && k === ck) showFrame(ci, cj, ck);
+  };
+  img.onerror = () => {
+    statusEl.innerHTML = `<span style="color:#a04040">Could not load ${FILENAME(i,j,k)}</span>`;
+  };
+  img.src = BASE_URL + FILENAME(i, j, k);
+}
+
+function showFrame(i, j, k) {
+  if (loaded[i][j][k]) {
+    displayImg.src = cache[i][j][k].src;
+  }
+  // if not yet loaded, the onload handler above will call showFrame when ready
+}
+
+function updateStatus() {
+  statusEl.innerHTML =
+    `<span class="frame-id">${FILENAME(ci, cj, ck)}</span> · ` +
+    `<span class="loaded">${loadedCount}/${TOTAL} loaded</span>`;
+}
+
+function onChange() {
+  ci = parseInt(slider0.value);
+  cj = parseInt(slider1.value);
+  ck = parseInt(slider2.value);
+  showFrame(ci, cj, ck);
+  updateStatus();
+  positionOverlays();
+}
+
+slider0.addEventListener('input', onChange);
+slider1.addEventListener('input', onChange);
+slider2.addEventListener('input', onChange);
+
+// Fullscreen
+fsBtn.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    widget.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  const isFS = !!document.fullscreenElement;
+  widget.classList.toggle('is-fullscreen', isFS);
+  fsIcon.setAttribute('d', isFS ? ICON_COLLAPSE : ICON_EXPAND);
+  fsBtn.title = isFS ? 'Exit fullscreen' : 'Fullscreen';
+  requestAnimationFrame(positionOverlays);
+});
+
+// ─── OVERLAY POSITIONING ──────────────────────────────────────────────────────
+// Fractional position within the actual image content (0–1 each axis).
+// 0,0 = top-left of image; 1,1 = bottom-right of image.
+const OVERLAY_POS = {
+  FS:    { x: 0.180, y: 0.130 },  // ← tune here
+  FL:    { x: 0.155, y: 0.020 },  // ← tune here
+  Lamp:  { x: 0.020, y: 0.180 },  // ← tune here
+  FS2:   { x: 0.180, y: 0.585 },  // ← tune here (second row)
+  FL2:   { x: 0.155, y: 0.475 },  // ← tune here (second row)
+  Lamp2: { x: 0.020, y: 0.635 },  // ← tune here (second row)
+  // AS: x is dynamic (driven by Condenser Axial Position slider); tune xMin/xMax and y below
+  AS:      { xMin: 0.76, xMax: 0.48, y: 0.05 },   // ← tune here
+  CL:      { xMin: 0.84, xMax: 0.56, y: 0.02 },   // ← tune here
+  Sample:  { xMin: 0.92, xMax: 0.64, y: 0.18 },   // ← tune here
+  AS2:     { xMin: 0.76, xMax: 0.48, y: 0.50 },   // ← tune here (second row)
+  CL2:     { xMin: 0.84, xMax: 0.56, y: 0.47 },   // ← tune here (second row)
+  Sample2: { xMin: 0.92, xMax: 0.64, y: 0.63 },   // ← tune here (second row)
+};
+const OVERLAY_FONT_REF = { size: 0.5, imgW: 500 }; // rem at reference image width (px)
+
+const IMG_ASPECT = 1516 / 782;  // native frame aspect ratio
+
+const overlayEls = {
+  FS:    document.getElementById('labelFS'),
+  FL:    document.getElementById('labelFL'),
+  Lamp:  document.getElementById('labelLamp'),
+  FS2:   document.getElementById('labelFS2'),
+  FL2:   document.getElementById('labelFL2'),
+  Lamp2: document.getElementById('labelLamp2'),
+};
+
+function positionOverlays() {
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  const containerAspect = cw / ch;
+
+  // Compute letterbox offsets so % is relative to the actual image area
+  let imgW, imgH, offX, offY;
+  if (containerAspect > IMG_ASPECT) {
+    imgH = ch; imgW = ch * IMG_ASPECT;
+    offX = (cw - imgW) / 2; offY = 0;
+  } else {
+    imgW = cw; imgH = cw / IMG_ASPECT;
+    offX = 0; offY = (ch - imgH) / 2;
+  }
+
+  const fontSize = (OVERLAY_FONT_REF.size * imgW / OVERLAY_FONT_REF.imgW) + 'rem';
+  for (const [key, el] of Object.entries(overlayEls)) {
+    const p = OVERLAY_POS[key];
+    el.style.left = (offX + p.x * imgW) + 'px';
+    el.style.top  = (offY + p.y * imgH) + 'px';
+    el.style.fontSize = fontSize;
+  }
+
+  // AS, CL, SAMPLE: x driven by Condenser Axial Position slider (slider1, range 0–19)
+  const t = parseInt(slider1.value) / (STEPS - 1);  // 0 → 1
+  for (const [key, el] of [
+    ['AS',      document.getElementById('labelAS')],
+    ['CL',      document.getElementById('labelCL')],
+    ['Sample',  document.getElementById('labelSample')],
+    ['AS2',     document.getElementById('labelAS2')],
+    ['CL2',     document.getElementById('labelCL2')],
+    ['Sample2', document.getElementById('labelSample2')],
+  ]) {
+    const p = OVERLAY_POS[key];
+    el.style.left = (offX + (p.xMin + t * (p.xMax - p.xMin)) * imgW) + 'px';
+    el.style.top  = (offY + p.y * imgH) + 'px';
+    el.style.fontSize = fontSize;
+  }
+}
+
+window.addEventListener('resize', positionOverlays);
+positionOverlays();
+
+// Boot — load all frames
+for (let i = 0; i < STEPS; i++)
+  for (let j = 0; j < STEPS; j++)
+    for (let k = 0; k < STEPS; k++)
+      loadFrame(i, j, k);
+showFrame(0, 0, 0);
+updateStatus();
+</script>
+</body>
+</html>
