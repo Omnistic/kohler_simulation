@@ -428,31 +428,33 @@ document.addEventListener('fullscreenchange', () => {
 // Fractional position within the actual image content (0–1 each axis).
 // 0,0 = top-left of image; 1,1 = bottom-right of image.
 const OVERLAY_POS = {
-  FS:    { x: 0.180, y: 0.130 },  // ← tune here
-  FL:    { x: 0.155, y: 0.020 },  // ← tune here
-  Lamp:  { x: 0.020, y: 0.180 },  // ← tune here
-  FS2:   { x: 0.180, y: 0.585 },  // ← tune here (second row)
-  FL2:   { x: 0.155, y: 0.475 },  // ← tune here (second row)
-  Lamp2: { x: 0.020, y: 0.635 },  // ← tune here (second row)
+  FS:    { x: 0.245, y: 0.120 },  // ← tune here
+  FL:    { x: 0.190, y: 0.020 },  // ← tune here
+  Lamp:  { x: 0.035, y: 0.210 },  // ← tune here
+  FS2:   { x: 0.245, y: 0.595 },  // ← tune here (second row)
+  FL2:   { x: 0.190, y: 0.495 },  // ← tune here (second row)
+  Lamp2: { x: 0.035, y: 0.680 },  // ← tune here (second row)
   // AS: x is dynamic (driven by Condenser Axial Position slider); tune xMin/xMax and y below
-  AS:      { xMin: 0.76, xMax: 0.48, y: 0.05 },   // ← tune here
-  CL:      { xMin: 0.84, xMax: 0.56, y: 0.02 },   // ← tune here
-  Sample:  { xMin: 0.92, xMax: 0.64, y: 0.18 },   // ← tune here
-  AS2:     { xMin: 0.76, xMax: 0.48, y: 0.50 },   // ← tune here (second row)
-  CL2:     { xMin: 0.84, xMax: 0.56, y: 0.47 },   // ← tune here (second row)
-  Sample2: { xMin: 0.92, xMax: 0.64, y: 0.63 },   // ← tune here (second row)
+  AS:      { xMin: 0.7, xMax: 0.65, y: 0.05 },   // ← tune here
+  CL:      { xMin: 0.82, xMax: 0.77, y: 0.02 },   // ← tune here
+  Sample:  { x: 0.90, y: 0.21 },                   // ← tune here (FIXED position)
+  AS2:     { xMin: 0.7, xMax: 0.65, y: 0.50 },   // ← tune here (second row)
+  CL2:     { xMin: 0.82, xMax: 0.77, y: 0.495 },   // ← tune here (second row)
+  Sample2: { x: 0.90, y: 0.68 },                   // ← tune here (FIXED position, second row)
 };
 const OVERLAY_FONT_REF = { size: 0.5, imgW: 500 }; // rem at reference image width (px)
 
 const IMG_ASPECT = 1516 / 782;  // native frame aspect ratio
 
 const overlayEls = {
-  FS:    document.getElementById('labelFS'),
-  FL:    document.getElementById('labelFL'),
-  Lamp:  document.getElementById('labelLamp'),
-  FS2:   document.getElementById('labelFS2'),
-  FL2:   document.getElementById('labelFL2'),
-  Lamp2: document.getElementById('labelLamp2'),
+  FS:      document.getElementById('labelFS'),
+  FL:      document.getElementById('labelFL'),
+  Lamp:    document.getElementById('labelLamp'),
+  FS2:     document.getElementById('labelFS2'),
+  FL2:     document.getElementById('labelFL2'),
+  Lamp2:   document.getElementById('labelLamp2'),
+  Sample:  document.getElementById('labelSample'),
+  Sample2: document.getElementById('labelSample2'),
 };
 
 function positionOverlays() {
@@ -481,12 +483,10 @@ function positionOverlays() {
   // AS, CL, SAMPLE: x driven by Condenser Axial Position slider (slider1, range 0–19)
   const t = parseInt(slider1.value) / (STEPS - 1);  // 0 → 1
   for (const [key, el] of [
-    ['AS',      document.getElementById('labelAS')],
-    ['CL',      document.getElementById('labelCL')],
-    ['Sample',  document.getElementById('labelSample')],
-    ['AS2',     document.getElementById('labelAS2')],
-    ['CL2',     document.getElementById('labelCL2')],
-    ['Sample2', document.getElementById('labelSample2')],
+    ['AS',  document.getElementById('labelAS')],
+    ['CL',  document.getElementById('labelCL')],
+    ['AS2', document.getElementById('labelAS2')],
+    ['CL2', document.getElementById('labelCL2')],
   ]) {
     const p = OVERLAY_POS[key];
     el.style.left = (offX + (p.xMin + t * (p.xMax - p.xMin)) * imgW) + 'px';
